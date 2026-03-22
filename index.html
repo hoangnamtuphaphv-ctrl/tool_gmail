@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAM_TOOL_PRO</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 10px; text-align: center; }
+        .box { border: 2px solid #ff0050; padding: 15px; border-radius: 8px; background: #111; margin-bottom: 10px; }
+        button { width: 100%; padding: 15px; margin: 8px 0; border: none; font-weight: bold; border-radius: 5px; color: #fff; }
+        .btn-l4m { background: #f4b400; color: #000; box-shadow: 0 4px #b8860b; }
+        .points { font-size: 50px; color: yellow; text-shadow: 0 0 10px red; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2 style="color:#ff0050; margin:0;">NAM MASTER SYSTEM</h2>
+        <div id="status" style="font-size: 11px; color:#888;">H? TH?NG S?N SÀNG</div>
+    </div>
+
+    <div class="box">
+        <div class="points" id="u-points">0</div>
+        <p style="font-size: 10px; color: #888;">ÐI?M TRÊN DATABASE</p>
+        <button class="btn-l4m" onclick="taoLink()">?? AUTO T?O LINK VU?T</button>
+    </div>
+
+    <div id="mail-area" style="display:none;" class="box">
+        <button style="background:#ff0050;" onclick="alert('Ðang t?o mail...')">T?O MAIL TM (-1d)</button>
+    </div>
+
+<script>
+    const L4M_API = "69231267551477519f74201f"; 
+    const FB_TOKEN = "AIzaSyBbPIh-2s5medySYTDnqh2TA-2HI1JmsFI";
+    const DB_URL = "https://savedatabynamtool-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    const MY_UID = "nam_master_01";
+    
+    // Link d?n d?n file thanhcong.html (S?p s?a l?i theo link web c?a s?p)
+    const LINK_THANH_CONG = "https://your-website.com/thanhcong.html"; 
+
+    let pts = 0;
+
+    window.onload = async () => {
+        // N?u quay l?i t? trang thành công thì c?ng di?m
+        if(window.location.search.includes('add=true')) {
+            await congDiem();
+        }
+        await loadDB();
+    };
+
+    async function loadDB() {
+        const res = await fetch(`${DB_URL}/users/${MY_UID}.json?auth=${FB_TOKEN}`);
+        const data = await res.json();
+        pts = data ? data.points : 0;
+        document.getElementById('u-points').innerText = pts;
+        document.getElementById('mail-area').style.display = pts > 0 ? 'block' : 'none';
+    }
+
+    async function taoLink() {
+        document.getElementById('status').innerText = "ÐANG T?O LINK...";
+        const apiURL = `https://link4m.co/api-shorten/v2?api=${L4M_API}&url=${encodeURIComponent(LINK_THANH_CONG)}`;
+        
+        try {
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(apiURL)}`);
+            const json = await res.json();
+            const data = JSON.parse(json.contents);
+            if(data.status === "success") window.open(data.shortenedUrl, '_blank');
+        } catch(e) { alert("L?i m?ng!"); }
+    }
+
+    async function congDiem() {
+        document.getElementById('status').innerText = "ÐANG C?NG ÐI?M...";
+        const res = await fetch(`${DB_URL}/users/${MY_UID}.json?auth=${FB_TOKEN}`);
+        const data = await res.json();
+        let newPts = (data ? data.points : 0) + 1;
+        
+        await fetch(`${DB_URL}/users/${MY_UID}.json?auth=${FB_TOKEN}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ points: newPts })
+        });
+        window.history.replaceState({}, '', window.location.pathname);
+        alert("Ngon! +1 Ði?m thành công.");
+    }
+</script>
+</body>
+</html>
