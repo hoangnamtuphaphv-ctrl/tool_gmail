@@ -1,0 +1,230 @@
+<script>
+    // --- 1. C?U HÌNH FIREBASE (S?P ÐI?N THÔNG TIN C?A S?P) ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyBbPIh-2s5medySYTDnqh2TA-2HI1JmsFI",
+  authDomain: "savedatabynamtool.firebaseapp.com",
+  databaseURL: "https://savedatabynamtool-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "savedatabynamtool",
+  storageBucket: "savedatabynamtool.firebasestorage.app",
+  messagingSenderId: "928888128176",
+  appId: "1:928888128176:web:6aa0d714ed6c5886e87175"
+    };
+
+    const ADMIN_EMAIL = "hoangnamtuphap.hv@gmail.com"; 
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    
+    // API Vu?t link và Link dích
+    const L4M_API = "69231267551477519f74201f";
+    const LINK_THANH_CONG = "https://hoangnamtuphaphv-ctrl.github.io/tool_gmail/thanhcong.html";
+
+    let currentUser = null;
+    let points = 0;
+    let mailData = [];
+    let mailCountInSession = 0; // Ð?m s? mail trong 1 lu?t IP (Max = 5)
+
+    // --- 2. QU?N LÝ GIAO DI?N (SIDEBAR & SECTION) ---
+    function toggleNav() {
+        const side = document.getElementById("mySidebar");
+        side.style.width = side.style.width === "250px" ? "0" : "250px";
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'sec-mail') checkMyIP(); // T? d?ng check IP khi vào m?c mail
+        toggleNav();
+    }
+
+    // --- 3. LOGIC ÐANG NH?P & D? LI?U ---
+    auth.onAuthStateChanged(user => {
+        if (user) { 
+            currentUser = user; 
+            document.getElementById('login-ui').style.display = 'none';
+            document.getElementById('main-ui').style.display = 'block';
+            document.getElementById('h-avatar').src = user.photoURL || "";
+            document.getElementById('s-avatar').src = user.photoURL || "";
+            document.getElementById('s-name').innerText = user.displayName;
+            if (user.email === ADMIN_EMAIL) document.getElementById('menu-admin').style.display = 'block';
+            loadData();
+        }
+    });
+
+    async function loadData() {
+        const snap = await db.ref('users/' + currentUser.uid).once('value');
+        const d = snap.val();
+        if(d) { points = d.points || 0; mailData = d.savedMails || []; }
+        
+        // Check xem có v?a vu?t link xong không
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('add') === 'true') {
+            points += 1; await syncData();
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+        updateUI(); renderMails();
+    }
+
+    async function syncData() {
+        await db.ref('users/' + currentUser.uid).update({ points: points, savedMails: mailData });
+        updateUI();
+    }
+
+    function updateUI() { document.getElementById('u-points').innerText = points; }
+    function loginGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    function logout() { auth.signOut().then(() => location.reload()); }
+
+    // --- 4. LOGIC KI?M SOÁT IP (CHO OPPO A31) ---
+    async function checkMyIP() {
+        const display = document.getElementById('ip-display');
+        display.innerText = "? Ðang quét IP...";
+        try {
+            const r = await fetch('https://api.ipify.org?format=json');
+            const j = await r.json();
+            display.innerHTML = `IP HI?N T?I: <b style="color:yellow;">${j.ip}</b>`;
+            return j.ip;
+        } catch(e) { display.innerText = "? L?i m?ng!"; return null; }
+    }
+
+    async function refreshIPProcess() {
+        const btn = document.getElementById('btn-refresh-ip');
+        btn.innerText = "? Ðang xác th?c...";
+        const newIP = await checkMyIP();
+        
+        if(newIP) {
+            btn.innerText = "? IP ÐÃ Ð?I - TI?P T?C!";
+            btn.style.background = "#28a745";
+            mailCountInSession = 0; // Reset b? d?m
+            document.getElementById('count-session').innerText = "0";
+            document.getElementById('btn-create-x5').disabled = false;
+            document.getElementById('btn-create-x5').style.opacity = "1";
+            document.getElementById('ip-lock-msg').style.display = "none";
+            document.getElementById('ip-panel').style.borderColor = "#007bff";
+        }
+    }
+
+    // --- 5. LOGIC T?O MAIL SIÊU T?C ---
+    async function superFastCreate(soluong) {
+        if(points < soluong) return alert("S?p không d? di?m!");
+        
+        const btn = document.getElementById('btn-create-x5');
+        btn.disabled = true;
+        btn.style.opacity = "0.5";
+
+        for(let i = 0; i < soluong; i++) {
+            document.getElementById('stt-mail').innerText = `?? Ðang ch?y cái th? ${i+1}...`;
+            await createMailTM(); 
+            mailCountInSession++;
+            document.getElementById('count-session').innerText = mailCountInSession;
+            await new Promise(r => setTimeout(r, 1500)); // Ch? nh? tránh spam
+        }
+
+        // CH?T CH?N 5 CÁI THÌ KHÓA
+        if(mailCountInSession >= 5) {
+            document.getElementById('stt-mail').innerText = "?? H?T LU?T! VUI LÒNG Ð?I IP.";
+            btn.disabled = true;
+            btn.style.opacity = "0.2";
+            document.getElementById('ip-lock-msg').style.display = "block";
+            document.getElementById('ip-panel').style.borderColor = "yellow";
+            document.getElementById('btn-refresh-ip').innerText = "?? ÐÃ Ð?I IP? B?M Ð? M? KHÓA";
+            document.getElementById('btn-refresh-ip').style.background = "#ffc107";
+        } else {
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+    }
+
+    async function createMailTM() {
+        const api_url = Math.random() > 0.5 ? 'api.mail.tm' : 'api.mail.gw';
+        try {
+            const d = await fetch(`https://${api_url}/domains`).then(r => r.json());
+            const dom = d['hydra:member'][0].domain;
+            const user = "nam" + Math.random().toString(36).slice(-6) + "@" + dom;
+            const pass = "Nam" + Math.floor(Math.random()*999) + "!";
+
+            const reg = await fetch(`https://${api_url}/accounts`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({address: user, password: pass})
+            });
+
+            if(reg.status !== 201) return;
+
+            const t = await fetch(`https://${api_url}/token`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({address: user, password: pass})
+            }).then(r => r.json());
+
+            mailData.unshift({ address: user, token: t.token, otp: "------", server: api_url });
+            points -= 1; 
+            await syncData();
+            renderMails();
+        } catch(e) { console.log("L?i t?o 1 mail, b? qua..."); }
+    }
+
+    function renderMails() {
+        const list = document.getElementById('mail-list');
+        list.innerHTML = mailData.map((m, i) => `
+            <div class="mail-box">
+                <span class="otp" id="otp-${i}">${m.otp}</span>
+                <b style="color:cyan;">MAIL:</b> ${m.address} <br>
+                <button class="btn-copy" onclick="copyClip('${m.address}')" style="background:#333; padding:5px; margin-top:5px; border-radius:3px; font-size:10px;">Copy</button>
+                <button class="btn-del" onclick="deleteMail(${i})" style="background:#600; padding:5px; margin-left:10px; border-radius:3px; font-size:10px;">Xóa</button>
+            </div>
+        `).join('');
+        startCheckOTP();
+    }
+
+    async function deleteMail(index) {
+        if(confirm("Xóa mail này?")) {
+            mailData.splice(index, 1);
+            await syncData();
+            renderMails();
+        }
+    }
+
+    function startCheckOTP() {
+        if(window.otpInterval) clearInterval(window.otpInterval);
+        window.otpInterval = setInterval(async () => {
+            mailData.forEach(async (m, i) => {
+                if(m.otp !== "------") return;
+                try {
+                    const r = await fetch(`https://${m.server}/messages`, { 
+                        headers: {'Authorization': `Bearer ${m.token}`} 
+                    }).then(r => r.json());
+                    if(r['hydra:member'].length > 0) {
+                        const msg = await fetch(`https://${m.server}/messages/${r['hydra:member'][0].id}`, {
+                            headers: {'Authorization': `Bearer ${m.token}`}
+                        }).then(r => r.json());
+                        const c = msg.intro.match(/\d{6}/) || msg.text.match(/\d{6}/);
+                        if(c) { m.otp = c[0]; document.getElementById(`otp-${i}`).innerText = c[0]; await syncData(); }
+                    }
+                } catch(e) {}
+            });
+        }, 5000);
+    }
+
+    // --- 6. CÁC HÀM PH? TR? ---
+    async function taoLink4M() {
+        const url = `https://link4m.co/api-shorten/v2?api=${L4M_API}&url=${encodeURIComponent(LINK_THANH_CONG)}`;
+        try {
+            const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            const j = await r.json();
+            const res = JSON.parse(j.contents);
+            if(res.status === "success") window.location.href = res.shortenedUrl;
+        } catch(e) { alert("L?i m?ng!"); }
+    }
+
+    async function checkKey() {
+        const ki = document.getElementById('input-key').value.trim();
+        const res = await db.ref('keys/' + ki).once('value');
+        if(res.val() && res.val().status === "unused") {
+            points += 30; await db.ref('keys/' + ki).update({ status: "used" });
+            await syncData(); alert("? N?p thành công!");
+            document.getElementById('input-key').value = "";
+        } else { alert("? Mã không dúng!"); }
+    }
+
+    function copyClip(t) { navigator.clipboard.writeText(t); alert("Ðã copy!"); }
+</script>
