@@ -346,15 +346,37 @@
     }
 
     function loadAdminKeys() {
-        db.ref('keys').on('value', snap => {
-            const keys = snap.val(); const list = document.getElementById('admin-list');
-            list.innerHTML = ""; if(!keys) return;
-            Object.keys(keys).reverse().slice(0, 10).forEach(k => {
-                list.innerHTML += `<div style="font-size:10px; border-bottom:1px solid #222; padding:3px;">${k} - ${keys[k].status}</div>`;
-            });
-        });
-    }
+    // Lấy dữ liệu từ nhánh 'keys' trong Firebase
+    db.ref('keys').on('value', snap => {
+        const keys = snap.val();
+        const list = document.getElementById('admin-list');
+        list.innerHTML = ""; // Xóa danh sách cũ để làm mới
+        
+        if(!keys) {
+            list.innerHTML = "<p style='color:#555; text-align:center;'>Chưa có key nào được tạo.</p>";
+            return;
+        }
 
+        // Chuyển object thành mảng để đảo ngược (Key mới hiện lên đầu)
+        Object.keys(keys).reverse().forEach(k => {
+            const isUsed = keys[k].status === "used";
+            const color = isUsed ? "#444" : "#0f0"; // Key chưa dùng màu Xanh, dùng rồi màu Xám
+            const statusText = isUsed ? `❌ Đã dùng (${keys[k].usedBy || 'không rõ'})` : "✅ Chưa dùng";
+
+            list.innerHTML += `
+                <div style="border: 1px solid #222; padding: 10px; margin-bottom: 5px; border-radius: 5px; background: #0a0a0a;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <b style="color:${color}; font-size: 14px;">${k}</b>
+                        <button onclick="copyClip('${k}')" style="width:auto; padding:5px 10px; background:#222; font-size:10px;">COPY</button>
+                    </div>
+                    <div style="font-size: 9px; color: #666; margin-top: 5px;">
+                        Trạng thái: ${statusText}
+                    </div>
+                </div>
+            `;
+        });
+    });
+}
     function copyClip(t) { navigator.clipboard.writeText(t); alert("Đã copy!"); }
 </script>
 </body>
