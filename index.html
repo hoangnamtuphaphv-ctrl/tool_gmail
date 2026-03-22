@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAM_MASTER_V5_PERMANENT_STORAGE</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    
+    <style>
+        :root { --main-blue: #4285F4; --admin-green: #00ff00; --key-gold: #f4b400; --bg-dark: #0a0a0a; }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; }
+        
+        /* HEADER */
+        .header { background: #111; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 100; }
+        .menu-btn { font-size: 24px; cursor: pointer; color: var(--main-blue); }
+        .user-avt { width: 35px; height: 35px; border-radius: 50%; border: 2px solid var(--main-blue); }
+
+        /* SIDEBAR */
+        .sidebar { height: 100%; width: 0; position: fixed; z-index: 200; top: 0; left: 0; background-color: var(--bg-dark); overflow-x: hidden; transition: 0.3s; padding-top: 20px; border-right: 1px solid #333; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 14px; color: #aaa; display: block; border-bottom: 1px solid #111; }
+        .user-profile-side { padding: 20px; text-align: center; border-bottom: 1px solid #222; }
+
+        /* GIAO DI?N CHÍNH */
+        .container { padding: 15px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .box { border: 1px solid #333; padding: 15px; border-radius: 8px; background: var(--bg-dark); margin-bottom: 10px; }
+        
+        /* KHO MAIL VÔ H?N */
+        #mail-list { max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .mail-box { border: 1px solid #0f0; padding: 10px; margin-top: 10px; position: relative; border-radius: 5px; background: #000; font-size: 11px; }
+        .otp { color: yellow; font-size: 20px; font-weight: bold; position: absolute; right: 10px; top: 10px; border: 1px dashed yellow; padding: 2px 5px; }
+        .btn-del { background: #ff4444; color: #fff; width: auto; padding: 3px 8px; font-size: 9px; margin-top: 5px; margin-left: 5px; }
+        .btn-copy { background: #333; color: #fff; width: auto; padding: 3px 8px; font-size: 9px; margin-top: 5px; }
+        
+        button { width: 100%; padding: 15px; margin: 5px 0; border: none; font-weight: bold; border-radius: 5px; cursor: pointer; color: #fff; }
+        input { width: 90%; padding: 12px; margin: 10px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; text-align: center; border-radius: 5px; }
+        .points { font-size: 45px; color: yellow; text-shadow: 0 0 10px red; font-weight: bold; text-align: center; }
+        .btn-blue { background: var(--main-blue); }
+        .btn-gold { background: var(--key-gold); color: #000; }
+        .btn-red { background: #ea4335; }
+        .btn-green { background: var(--admin-green); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div id="login-ui" style="text-align:center; padding-top:100px;">
+        <h2 style="color:var(--main-blue);">?? NAM MASTER SYSTEM</h2>
+        <button class="btn-blue" style="width:80%" onclick="loginGoogle()">ÐANG NH?P GOOGLE</button>
+    </div>
+
+    <div id="main-ui" style="display:none;">
+        <div class="header">
+            <div class="menu-btn" onclick="toggleNav()">?</div>
+            <span style="font-weight: bold;">NAM MASTER V5</span>
+            <img id="h-avatar" class="user-avt" src="" alt="AVT">
+        </div>
+
+        <div id="mySidebar" class="sidebar">
+            <a href="javascript:void(0)" style="font-size:30px; text-align:right;" onclick="toggleNav()">×</a>
+            <div class="user-profile-side">
+                <img id="s-avatar" style="width:50px; border-radius:50%;" src="" alt="AVT">
+                <div id="s-name" style="color:#fff; font-weight:bold; margin-top:5px;"></div>
+            </div>
+            <a href="#" onclick="showSection('sec-home')">?? Trang Ch?</a>
+            <a href="#" id="menu-admin" style="display:none; color:var(--admin-green);" onclick="showSection('sec-admin')">??? Admin (T?o Key)</a>
+            <a href="#" onclick="showSection('sec-earn')">?? Ki?m Ði?m</a>
+            <a href="#" onclick="showSection('sec-mail')">?? Kho Mail Vinh Vi?n</a>
+            <a href="#" onclick="showSection('sec-key')">?? N?p Mã Key</a>
+            <a href="#" onclick="logout()" style="color: #ff4444;">?? Ðang Xu?t</a>
+        </div>
+
+        <div class="container">
+            <div id="sec-home" class="section active">
+                <div class="box">
+                    <div class="points" id="u-points">0</div>
+                    <p style="text-align:center; color:#888; font-size:10px;">ÐI?M HI?N T?I</p>
+                </div>
+            </div>
+
+            <div id="sec-mail" class="section">
+                <div class="box" style="border-color: #ea4335;">
+                    <h3 style="margin:0; color:#ea4335;">KHO LUU TR? MAIL</h3>
+                    <p id="stt-mail" style="font-size:10px; color:#888;">S?p có th? luu bao nhiêu tùy thích!</p>
+                    <button class="btn-red" onclick="buyMail(1)">T?O MAIL M?I (-1d)</button>
+                </div>
+                <div id="mail-list"></div>
+            </div>
+
+            <div id="sec-admin" class="section">
+                <div class="box" style="border-color: var(--admin-green);">
+                    <h3>ADMIN: T?O KEY BÁN</h3>
+                    <input type="text" id="admin-key-input" placeholder="Tên key...">
+                    <button class="btn-green" style="width:48%;" onclick="generateRandomKey()">RANDOM ??</button>
+                    <button class="btn-green" style="width:48%;" onclick="adminCreateKey()">LUU KEY ??</button>
+                    <div id="admin-list" style="margin-top:10px; max-height:150px; overflow-y:auto;"></div>
+                </div>
+            </div>
+
+            <div id="sec-earn" class="section">
+                <div class="box">
+                    <h3>VU?T LINK KI?M ÐI?M</h3>
+                    <button class="btn-gold" onclick="taoLink4M()">B?T Ð?U (+1d)</button>
+                </div>
+            </div>
+
+            <div id="sec-key" class="section">
+                <div class="box">
+                    <h3>N?P MÃ C?A S?P</h3>
+                    <input type="text" id="input-key" placeholder="Dán mã key...">
+                    <button class="btn-gold" onclick="checkKey()">N?P NGAY</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- S?P ÐI?N CONFIG C?A S?P VÀO ÐÂY ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyBbPIh-2s5medySYTDnqh2TA-2HI1JmsFI",
+  authDomain: "savedatabynamtool.firebaseapp.com",
+  databaseURL: "https://savedatabynamtool-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "savedatabynamtool",
+  storageBucket: "savedatabynamtool.firebasestorage.app",
+  messagingSenderId: "928888128176",
+  appId: "1:928888128176:web:6aa0d714ed6c5886e87175"
+    };
+
+    const ADMIN_EMAIL = "hoangnamtuphap.hv@gmail.com"; 
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+    const L4M_API = "69231267551477519f74201f";
+    const LINK_THANH_CONG = "https://hoangnamtuphaphv-ctrl.github.io/tool_gmail/thanhcong.html";
+
+    let currentUser = null;
+    let points = 0;
+    let mailData = [];
+
+    function toggleNav() {
+        const side = document.getElementById("mySidebar");
+        side.style.width = side.style.width === "250px" ? "0" : "250px";
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        toggleNav();
+    }
+
+    auth.onAuthStateChanged(user => {
+        if (user) { 
+            currentUser = user; 
+            document.getElementById('login-ui').style.display = 'none';
+            document.getElementById('main-ui').style.display = 'block';
+            document.getElementById('h-avatar').src = user.photoURL || "";
+            document.getElementById('s-avatar').src = user.photoURL || "";
+            document.getElementById('s-name').innerText = user.displayName;
+            if (user.email === ADMIN_EMAIL) document.getElementById('menu-admin').style.display = 'block';
+            loadData();
+        }
+    });
+
+    async function loadData() {
+        const snap = await db.ref('users/' + currentUser.uid).once('value');
+        const d = snap.val();
+        if(d) { points = d.points || 0; mailData = d.savedMails || []; }
+        updateUI(); renderMails();
+    }
+
+    async function syncData() {
+        await db.ref('users/' + currentUser.uid).update({ points: points, savedMails: mailData });
+        updateUI();
+    }
+
+    function updateUI() { document.getElementById('u-points').innerText = points; }
+    function loginGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    function logout() { auth.signOut().then(() => location.reload()); }
+
+    // T?O MAIL VÀ LUU VÔ H?N
+    async function buyMail(n) {
+        if(points < n) return alert("H?t di?m!");
+        document.getElementById('stt-mail').innerText = "? Ðang t?o...";
+        points -= n; await createMailTM();
+    }
+
+    async function createMailTM() {
+        try {
+            const d = await fetch('https://api.mail.tm/domains').then(r => r.json());
+            const dom = d['hydra:member'][0].domain;
+            const user = "nam" + Math.random().toString(36).slice(-5) + "@" + dom;
+            const pass = "Nam123456!";
+            await fetch('https://api.mail.tm/accounts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({address: user, password: pass})});
+            const t = await fetch('https://api.mail.tm/token', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({address: user, password: pass})}).then(r => r.json());
+            
+            // Thêm vào database (KHÔNG pop cái cu n?a)
+            mailData.unshift({ address: user, token: t.token, otp: "------" });
+            await syncData(); renderMails();
+            document.getElementById('stt-mail').innerText = "? Ðã luu vinh vi?n!";
+        } catch(e) { alert("L?i!"); }
+    }
+
+    function renderMails() {
+        document.getElementById('mail-list').innerHTML = mailData.map((m, i) => `
+            <div class="mail-box">
+                <span class="otp" id="otp-${i}">${m.otp}</span>
+                <b style="color:cyan;">MAIL:</b> ${m.address} <br>
+                <button class="btn-copy" onclick="copyClip('${m.address}')">Copy</button>
+                <button class="btn-del" onclick="deleteMail(${i})">Xóa</button>
+            </div>
+        `).join('');
+        startCheckOTP();
+    }
+
+    // Hàm xóa mail th? công
+    async function deleteMail(index) {
+        if(confirm("Xóa mail này s?p oi?")) {
+            mailData.splice(index, 1);
+            await syncData();
+            renderMails();
+        }
+    }
+
+    function startCheckOTP() {
+        setInterval(async () => {
+            mailData.forEach(async (m, i) => {
+                if(m.otp !== "------") return;
+                try {
+                    const r = await fetch('https://api.mail.tm/messages', { headers: {'Authorization': `Bearer ${m.token}`} }).then(r => r.json());
+                    if(r['hydra:member'].length > 0) {
+                        const c = r['hydra:member'][0].intro.match(/\d{6}/);
+                        if(c) { m.otp = c[0]; document.getElementById(`otp-${i}`).innerText = c[0]; await syncData(); }
+                    }
+                } catch(e) {}
+            });
+        }, 5000);
+    }
+
+    // ADMIN & OTHER LOGIC
+    function generateRandomKey() {
+        const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let r = 'NAM-';
+        for (let i = 0; i < 5; i++) r += c.charAt(Math.floor(Math.random() * c.length));
+        document.getElementById('admin-key-input').value = r;
+    }
+
+    async function adminCreateKey() {
+        const k = document.getElementById('admin-key-input').value.trim();
+        if(!k) return;
+        await db.ref('keys/' + k).set({ status: "unused", createdAt: Date.now() });
+        document.getElementById('admin-key-input').value = "";
+    }
+
+    function loadAdminKeys() {
+        db.ref('keys').on('value', snap => {
+            const keys = snap.val();
+            const list = document.getElementById('admin-list');
+            list.innerHTML = "";
+            if(!keys) return;
+            Object.keys(keys).reverse().forEach(k => {
+                const col = keys[k].status === "unused" ? "#0f0" : "#555";
+                list.innerHTML += `<div style="border-bottom:1px solid #222; padding:3px; display:flex; justify-content:space-between; font-size:10px;">
+                    <span style="color:${col}">${k}</span>
+                    <button onclick="copyClip('${k}')" style="width:auto; padding:2px; font-size:8px;">Copy</button>
+                </div>`;
+            });
+        });
+    }
+
+    async function checkKey() {
+        const ki = document.getElementById('input-key').value.trim();
+        if(!ki) return;
+        const res = await db.ref('keys/' + ki).once('value');
+        if(res.val() && res.val().status === "unused") {
+            points += 30; await db.ref('keys/' + ki).update({ status: "used" });
+            await syncData(); alert("? N?p thành công!");
+            document.getElementById('input-key').value = "";
+        } else { alert("? Key h?ng!"); }
+    }
+
+    async function taoLink4M() {
+        const url = `https://link4m.co/api-shorten/v2?api=${L4M_API}&url=${encodeURIComponent(LINK_THANH_CONG)}`;
+        try {
+            const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            const j = await r.json();
+            const res = JSON.parse(j.contents);
+            if(res.status === "success") window.location.href = res.shortenedUrl;
+        } catch(e) { alert("L?i m?ng!"); }
+    }
+    function copyClip(t) { navigator.clipboard.writeText(t); alert("Ðã copy!"); }
+</script>
+</body>
+</html>
