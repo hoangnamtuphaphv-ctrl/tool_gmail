@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAM MASTER V8 - TURBO SYSTEM</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    
+    <style>
+        :root { --blue: #00d4ff; --red: #ff4444; --gold: #ffc107; --green: #00ff88; --bg: #050505; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        
+        /* GIAO DIỆN CHUNG */
+        .header { background: #111; padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #222; position: sticky; top: 0; z-index: 100; }
+        .user-avt { width: 35px; height: 35px; border-radius: 50%; border: 2px solid var(--blue); }
+        .sidebar { height: 100%; width: 0; position: fixed; z-index: 200; top: 0; left: 0; background: #0a0a0a; overflow-x: hidden; transition: 0.3s; border-right: 1px solid #222; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 14px; color: #aaa; display: block; border-bottom: 1px solid #111; }
+        .container { padding: 15px; max-width: 500px; margin: auto; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .box { border: 1px solid #222; padding: 15px; border-radius: 10px; background: #0f0f0f; margin-bottom: 15px; }
+        
+        /* MAIL & OTP */
+        .mail-box { border: 1px solid #333; padding: 12px; margin-bottom: 8px; border-radius: 6px; background: #000; position: relative; border-left: 3px solid var(--blue); }
+        .otp { color: #fff; background: #900; padding: 2px 8px; border-radius: 4px; font-weight: bold; position: absolute; right: 10px; top: 10px; font-size: 18px; border: 1px solid red; }
+        
+        /* BUTTONS */
+        button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #fff; }
+        .btn-blue { background: var(--blue); color: #000; }
+        .btn-red { background: var(--red); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-green { background: var(--green); color: #000; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="login-ui" style="text-align:center; padding-top:100px;">
+        <h2 style="color:var(--blue);">🚀 NAM MASTER V8</h2>
+        <button class="btn-blue" onclick="loginGoogle()" style="width: 200px;">LOGIN GOOGLE</button>
+    </div>
+
+    <div id="main-ui" style="display:none;">
+        <div class="header">
+            <div onclick="toggleNav()" style="font-size:24px; color:var(--blue); cursor:pointer;">☰</div>
+            <span style="font-weight: bold;">NAM MASTER SYSTEM</span>
+            <img id="h-avatar" class="user-avt" src="">
+        </div>
+
+        <div id="mySidebar" class="sidebar">
+            <a href="javascript:void(0)" style="font-size:30px; text-align:right;" onclick="toggleNav()">×</a>
+            <div style="padding: 20px; text-align: center; border-bottom: 1px solid #222;">
+                <img id="s-avatar" style="width:60px; height: 60px; border-radius:50%; border: 2px solid var(--blue);">
+                <div id="s-name" style="margin-top:10px; font-weight:bold;"></div>
+            </div>
+            <a href="#" onclick="showSection('sec-home')">🏠 Trang Chủ</a>
+            <a href="#" id="menu-admin" style="display:none; color:var(--green);" onclick="showSection('sec-admin')">🛠️ KHO KEY CỦA BỐ</a>
+            <a href="#" onclick="showSection('sec-earn')">🔥 Kiếm Điểm</a>
+            <a href="#" onclick="showSection('sec-mail')">📧 Kho Mail & IP</a>
+            <a href="#" onclick="showSection('sec-key')">🔑 Nạp Key</a>
+            <a href="#" onclick="logout()" style="color: var(--red);">🚪 Thoát</a>
+        </div>
+
+        <div class="container">
+            <div id="sec-home" class="section active">
+                <div class="box">
+                    <div id="u-points" style="font-size: 50px; color: var(--gold); text-align: center; font-weight: bold;">0</div>
+                    <p style="text-align:center; color:#888; font-size:11px;">ĐIỂM HIỆN TẠI</p>
+                </div>
+            </div>
+
+            <div id="sec-admin" class="section">
+                <div class="box" style="border-color: var(--green);">
+                    <h3 style="color:var(--green); margin:0;">🛠️ QUẢN LÝ KEY (ADMIN)</h3>
+                    <input type="text" id="admin-key-input" placeholder="Tên key (ví dụ: NAM-Vip)">
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-green" onclick="generateRandomKey()">RANDOM</button>
+                        <button class="btn-green" style="background:#008844;" onclick="adminCreateKey()">LƯU KEY</button>
+                    </div>
+                    <div id="admin-list" style="margin-top:15px; max-height:300px; overflow-y:auto;">
+                        </div>
+                </div>
+            </div>
+
+            <div id="sec-mail" class="section">
+                <div id="ip-panel" class="box" style="border-color: var(--blue); background: #001529;">
+                    <h4 style="color:var(--blue); margin:0;">🛰️ TRẠM KIỂM SOÁT IP</h4>
+                    <div style="background: #002b55; border-left: 3px solid var(--blue); padding: 8px; margin: 10px 0; border-radius: 4px;">
+                        <p style="font-size: 10px; color: #00d4ff; margin: 0;">
+                            📢 <b>HƯỚNG DẪN:</b> <br>
+                            - PC dùng VPN (Opera, Chrome,...) <br>
+                            - Mobile dùng Chế độ máy bay
+                        </p>
+                    </div>
+                    <div id="ip-display" style="font-size: 11px; margin-bottom:10px;">Đang quét IP...</div>
+                    <button id="btn-refresh-ip" class="btn-green" onclick="refreshIPProcess()">🔄 LÀM MỚI IP (BẤM SAU KHI ĐỔI)</button>
+                </div>
+
+                <div class="box" style="border-color: var(--red);">
+                    <h3 style="color: var(--red); margin:0;">🚀 XƯỞNG MAIL TURBO</h3>
+                    <p id="stt-mail" style="font-size:10px; color: #888;">Lượt IP này: <b id="count-session" style="color:yellow;">0</b>/5</p>
+                    <button id="btn-create-x5" class="btn-red" onclick="superFastCreate(5)">TẠO X5 MAIL (GIẢM 5đ)</button>
+                    <p id="ip-lock-msg" style="display:none; color: yellow; font-size: 11px; text-align: center; margin-top: 10px;">⚠️ ĐÃ KHÓA: Đổi IP rồi bấm nút xanh ở trên!</p>
+                </div>
+                <div id="mail-list"></div>
+            </div>
+
+            <div id="sec-earn" class="section"><div class="box"><h3>KIẾM ĐIỂM</h3><button class="btn-gold" onclick="taoLink4M()">VƯỢT LINK (+1đ)</button></div></div>
+            <div id="sec-key" class="section"><div class="box"><h3>NẠP KEY</h3><input type="text" id="input-key" placeholder="Dán key vào đây..."><button class="btn-gold" onclick="checkKey()">NẠP NGAY</button></div></div>
+        </div>
+    </div>
+
+<script>
+    // --- CẤU HÌNH ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyBbPIh-2s5medySYTDnqh2TA-2HI1JmsFI",
+  authDomain: "savedatabynamtool.firebaseapp.com",
+  databaseURL: "https://savedatabynamtool-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "savedatabynamtool",
+  storageBucket: "savedatabynamtool.firebasestorage.app",
+  messagingSenderId: "928888128176",
+  appId: "1:928888128176:web:6aa0d714ed6c5886e87175"
+    };
+    const ADMIN_EMAIL = "hoangnamtuphap.hv@gmail.com";
+    const L4M_API = "69231267551477519f74201f";
+    const LINK_THANH_CONG = "https://hoangnamtuphaphv-ctrl.github.io/tool_gmail/thanhcong.html";
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth(); const db = firebase.database();
+    let currentUser = null; let points = 0; let mailData = []; let mailCountInSession = 0;
+
+    // --- NAVIGATION ---
+    function toggleNav() { const s = document.getElementById("mySidebar"); s.style.width = s.style.width === "250px" ? "0" : "250px"; }
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'sec-mail') checkMyIP();
+        if(id === 'sec-admin') loadAdminKeys();
+        toggleNav();
+    }
+
+    // --- AUTH ---
+    auth.onAuthStateChanged(user => {
+        if (user) { 
+            currentUser = user; 
+            document.getElementById('login-ui').style.display = 'none';
+            document.getElementById('main-ui').style.display = 'block';
+            document.getElementById('h-avatar').src = user.photoURL;
+            document.getElementById('s-avatar').src = user.photoURL;
+            document.getElementById('s-name').innerText = user.displayName;
+            if (user.email === ADMIN_EMAIL) document.getElementById('menu-admin').style.display = 'block';
+            loadData();
+        }
+    });
+
+    async function loadData() {
+        const snap = await db.ref('users/' + currentUser.uid).once('value');
+        const d = snap.val();
+        if(d) { points = d.points || 0; mailData = d.savedMails || []; }
+        updateUI(); renderMails();
+    }
+    async function syncData() { await db.ref('users/' + currentUser.uid).update({ points: points, savedMails: mailData }); updateUI(); }
+    function updateUI() { document.getElementById('u-points').innerText = points; }
+    function loginGoogle() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    function logout() { auth.signOut().then(() => location.reload()); }
+
+    // --- IP CONTROL ---
+    async function checkMyIP() {
+        const d = document.getElementById('ip-display');
+        try { const r = await fetch('https://api.ipify.org?format=json'); const j = await r.json(); d.innerHTML = `IP: <b style="color:var(--blue);">${j.ip}</b>`; return j.ip; }
+        catch(e) { d.innerText = "Lỗi quét IP!"; return null; }
+    }
+    async function refreshIPProcess() {
+        const b = document.getElementById('btn-refresh-ip');
+        b.innerText = "⏳ Đang check...";
+        if(await checkMyIP()) {
+            mailCountInSession = 0; document.getElementById('count-session').innerText = "0";
+            document.getElementById('btn-create-x5').disabled = false;
+            document.getElementById('btn-create-x5').style.opacity = "1";
+            document.getElementById('ip-lock-msg').style.display = "none";
+            b.innerText = "✅ ĐÃ ĐỔI IP - TIẾP TỤC!"; b.style.background = "var(--green)";
+        }
+    }
+
+    // --- MAIL ENGINE ---
+    async function superFastCreate(n) {
+        if(points < n) return alert("Hết điểm!");
+        const btn = document.getElementById('btn-create-x5');
+        btn.disabled = true; btn.style.opacity = "0.5";
+        for(let i=0; i<n; i++) {
+            document.getElementById('stt-mail').innerText = `🚀 Đang tạo cái ${i+1}...`;
+            await createMailTM(); mailCountInSession++;
+            document.getElementById('count-session').innerText = mailCountInSession;
+            await new Promise(r => setTimeout(r, 1500));
+        }
+        if(mailCountInSession >= 5) {
+            btn.disabled = true; btn.style.opacity = "0.2";
+            document.getElementById('ip-lock-msg').style.display = "block";
+            document.getElementById('btn-refresh-ip').innerText = "🔄 CẦN ĐỔI IP NGAY";
+            document.getElementById('btn-refresh-ip').style.background = "var(--gold)";
+        } else { btn.disabled = false; btn.style.opacity = "1"; }
+    }
+
+    async function createMailTM() {
+        const api = Math.random() > 0.5 ? 'api.mail.tm' : 'api.mail.gw';
+        try {
+            const d = await fetch(`https://${api}/domains`).then(r => r.json());
+            const dom = d['hydra:member'][0].domain;
+            const user = "n" + Math.random().toString(36).slice(-5) + "@" + dom;
+            const pass = "Nam" + Math.floor(Math.random()*999) + "!";
+            await fetch(`https://${api}/accounts`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({address: user, password: pass})});
+            const t = await fetch(`https://${api}/token`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({address: user, password: pass})}).then(r => r.json());
+            mailData.unshift({ address: user, token: t.token, otp: "------", server: api });
+            points -= 1; await syncData(); renderMails();
+        } catch(e) {}
+    }
+
+    function renderMails() {
+        document.getElementById('mail-list').innerHTML = mailData.map((m, i) => `
+            <div class="mail-box">
+                <span class="otp" id="otp-${i}">${m.otp}</span>
+                <b>MAIL:</b> ${m.address} <br>
+                <button onclick="copyClip('${m.address}')" style="width:auto; padding:4px 8px; font-size:10px; margin-top:5px; background:#333;">Copy</button>
+                <button onclick="deleteMail(${i})" style="width:auto; padding:4px 8px; font-size:10px; margin-left:10px; background:#600;">Xóa</button>
+            </div>
+        `).join('');
+        startCheckOTP();
+    }
+    function deleteMail(i) { if(confirm("Xóa?")) { mailData.splice(i, 1); syncData(); renderMails(); } }
+    function startCheckOTP() {
+        if(window.otpInt) clearInterval(window.otpInt);
+        window.otpInt = setInterval(async () => {
+            mailData.forEach(async (m, i) => {
+                if(m.otp !== "------") return;
+                try {
+                    const r = await fetch(`https://${m.server}/messages`, { headers: {'Authorization': `Bearer ${m.token}`} }).then(r => r.json());
+                    if(r['hydra:member'].length > 0) {
+                        const msg = await fetch(`https://${m.server}/messages/${r['hydra:member'][0].id}`, { headers: {'Authorization': `Bearer ${m.token}`} }).then(r => r.json());
+                        const c = msg.intro.match(/\d{6}/) || msg.text.match(/\d{6}/);
+                        if(c) { m.otp = c[0]; document.getElementById(`otp-${i}`).innerText = c[0]; syncData(); }
+                    }
+                } catch(e) {}
+            });
+        }, 5000);
+    }
+
+    // --- ADMIN KEY SYSTEM ---
+    function generateRandomKey() {
+        const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r = 'NAM-';
+        for (let i = 0; i < 6; i++) r += c.charAt(Math.floor(Math.random() * c.length));
+        document.getElementById('admin-key-input').value = r;
+    }
+    async function adminCreateKey() {
+        const k = document.getElementById('admin-key-input').value.trim();
+        if(!k) return; await db.ref('keys/' + k).set({ status: "unused", createdAt: Date.now() });
+        alert("Đã lưu kho key của bố!");
+    }
+    function loadAdminKeys() {
+        db.ref('keys').on('value', snap => {
+            const keys = snap.val(); const list = document.getElementById('admin-list');
+            list.innerHTML = ""; if(!keys) return;
+            Object.keys(keys).reverse().forEach(k => {
+                const isU = keys[k].status === "used";
+                list.innerHTML += `<div style="border-bottom:1px solid #222; padding:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:${isU ? '#555' : '#0f0'}; font-size:12px;">${k}</span>
+                    <button onclick="copyClip('${k}')" style="width:auto; padding:3px 8px; font-size:9px; background:#222;">COPY</button>
+                </div>`;
+            });
+        });
+    }
+
+    // --- UTILS ---
+    async function checkKey() {
+        const ki = document.getElementById('input-key').value.trim();
+        const res = await db.ref('keys/' + ki).once('value');
+        if(res.val() && res.val().status === "unused") {
+            points += 30; await db.ref('keys/' + ki).update({ status: "used" });
+            syncData(); alert("✅ Nạp thành công!"); document.getElementById('input-key').value = "";
+        } else { alert("❌ Key không hợp lệ!"); }
+    }
+    async function taoLink4M() {
+        const url = `https://link4m.co/api-shorten/v2?api=${L4M_API}&url=${encodeURIComponent(LINK_THANH_CONG)}`;
+        try {
+            const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            const j = await r.json(); const res = JSON.parse(j.contents);
+            if(res.status === "success") window.location.href = res.shortenedUrl;
+        } catch(e) { alert("Lỗi!"); }
+    }
+    function copyClip(t) { navigator.clipboard.writeText(t); alert("Đã copy!"); }
+</script>
+</body>
+</html>
