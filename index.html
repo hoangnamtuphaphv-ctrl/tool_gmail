@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAM MASTER V11 - KHÔNG GIỚI HẠN</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        :root { --b: #00d4ff; --r: #ff4444; --g: #00ff88; --bg: #050505; }
+        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; font-size: 13px; }
+        .header { background: #111; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; position: sticky; top:0; z-index:10; }
+        .sidebar { height: 100%; width: 0; position: fixed; z-index: 20; top: 0; left: 0; background: #0a0a0a; overflow-x: hidden; transition: 0.3s; border-right: 1px solid #222; }
+        .sidebar a { padding: 12px 20px; text-decoration: none; color: #aaa; display: block; border-bottom: 1px solid #111; }
+        .container { padding: 10px; max-width: 450px; margin: auto; }
+        .section { display: none; } .active { display: block; }
+        .box { border: 1px solid #222; padding: 12px; border-radius: 8px; background: #0f0f0f; margin-bottom: 10px; }
+        .mail-box { border: 1px solid #333; padding: 10px; margin-bottom: 5px; border-radius: 5px; background: #000; position: relative; border-left: 3px solid var(--b); }
+        .otp { color: #fff; background: #900; padding: 2px 6px; border-radius: 4px; font-weight: bold; position: absolute; right: 8px; top: 8px; font-size: 16px; border: 1px solid red; }
+        button { width: 100%; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 5px; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
+        .btn-b { background: var(--b); color: #000; } .btn-r { background: var(--r); color: #fff; } .btn-g { background: var(--g); color: #000; }
+        input { width: 100%; padding: 10px; margin: 5px 0; background: #111; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="login-ui" style="text-align:center; padding-top:100px;">
+        <h2 style="color:var(--b);">🚀 NAM MASTER V11</h2>
+        <button class="btn-b" onclick="loginG()" style="width:180px;">LOGIN GOOGLE</button>
+    </div>
+
+    <div id="main-ui" style="display:none;">
+        <div class="header">
+            <div onclick="tn()" style="font-size:20px; color:var(--b); cursor:pointer;">☰</div>
+            <b>NAM MASTER UNLIMITED</b>
+            <img id="h-avt" style="width:30px; border-radius:50%; border:1px solid var(--b);">
+        </div>
+
+        <div id="sd" class="sidebar">
+            <a href="javascript:void(0)" onclick="tn()" style="text-align:right; color:var(--r);">× ĐÓNG</a>
+            <a href="#" onclick="ss('h')">🏠 Trang Chủ</a>
+            <a href="#" id="m-ad" style="display:none; color:var(--g);" onclick="ss('ad')">🛠️ KHO KEY CỦA BỐ</a>
+            <a href="#" onclick="ss('m')">📧 Xưởng Mail Siêu Tốc</a>
+            <a href="#" onclick="ss('k')">🔑 Nạp Key</a>
+            <a href="#" onclick="lo()" style="color:var(--r); margin-top:20px;">🚪 Thoát</a>
+        </div>
+
+        <div class="container">
+            <div id="h" class="section active">
+                <div class="box">
+                    <div id="pts" style="font-size:50px; color:var(--g); text-align:center; font-weight:bold;">0</div>
+                    <p style="text-align:center;margin:0;font-size:10px;color:#666;">ĐIỂM HIỆN CÓ</p>
+                </div>
+            </div>
+
+            <div id="ad" class="section">
+                <div class="box" style="border-color:var(--g);">
+                    <h3 style="color:var(--g); margin:0;">🛠️ ADMIN PANEL</h3>
+                    <input id="ad-ki" placeholder="Nhập tên Key...">
+                    <button class="btn-g" onclick="ckey()">LƯU KEY</button>
+                    <div id="ad-list" style="margin-top:10px; max-height:250px; overflow-y:auto; border-top:1px solid #222;"></div>
+                </div>
+            </div>
+
+            <div id="m" class="section">
+                <div class="box" style="border-color:var(--r);">
+                    <h3 style="color:var(--r); margin:0;">🚀 TẠO MAIL KHÔNG GIỚI HẠN</h3>
+                    <p id="stt" style="font-size:10px; color:#888; margin-bottom: 10px;">Bấm nút dưới để đúc mail liên tục!</p>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-r" onclick="goX(1)">TẠO X1 (-1đ)</button>
+                        <button class="btn-r" style="background:#b30000;" onclick="goX(5)">TẠO X5 (-5đ)</button>
+                    </div>
+                </div>
+                <div id="m-list"></div>
+            </div>
+
+            <div id="k" class="section"><div class="box"><h3>🔑 NẠP KEY</h3><input id="ki" placeholder="Dán mã key..."><button class="btn-b" onclick="uKey()">NẠP ĐIỂM</button></div></div>
+        </div>
+    </div>
+
+<script>
+    // --- SẾP TỰ ĐIỀN FIREBASE CONFIG ---
+    const cfg = { apiKey: "AIzaSyBbPIh-2s5medySYTDnqh2TA-2HI1JmsFI",
+  authDomain: "savedatabynamtool.firebaseapp.com",
+  databaseURL: "https://savedatabynamtool-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "savedatabynamtool",
+  storageBucket: "savedatabynamtool.firebasestorage.app",
+  messagingSenderId: "928888128176",
+  appId: "1:928888128176:web:6aa0d714ed6c5886e87175" };
+    const AD_EMAIL = "hoangnamtuphap.hv@gmail.com";
+    
+    firebase.initializeApp(cfg); const auth = firebase.auth(); const db = firebase.database();
+    let u=null, p=0, md=[];
+
+    function tn() { const s = document.getElementById("sd"); s.style.width = s.style.width === "220px" ? "0" : "220px"; }
+    function ss(id) { document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='ad') lAdK(); tn(); }
+
+    auth.onAuthStateChanged(usr => { if (usr) { u=usr; document.getElementById('login-ui').style.display='none'; document.getElementById('main-ui').style.display='block'; document.getElementById('h-avt').src=usr.photoURL; if (usr.email === AD_EMAIL) document.getElementById('m-ad').style.display='block'; lD(); } });
+    async function lD() { const s = await db.ref('users/'+u.uid).once('value'); const d = s.val(); if(d) { p=d.points||0; md=d.savedMails||[]; } upUI(); rM(); }
+    function upUI() { document.getElementById('pts').innerText = p; }
+    async function syn() { await db.ref('users/'+u.uid).update({ points:p, savedMails:md }); upUI(); }
+    function loginG() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+    function lo() { auth.signOut().then(()=>location.reload()); }
+
+    async function goX(n) { 
+        if(p < n) return alert("Hết điểm rồi sếp!"); 
+        for(let i=0; i<n; i++) { 
+            document.getElementById('stt').innerText = `🚀 Đang đúc cái ${i+1}/${n}...`;
+            await cM(); 
+            await new Promise(r => setTimeout(r, 800)); // Tốc độ bàn thờ
+        } 
+        document.getElementById('stt').innerText = "✅ Xong! Tạo tiếp đi sếp!";
+    }
+
+    async function cM() { 
+        const api = Math.random() > 0.5 ? 'api.mail.tm' : 'api.mail.gw';
+        try {
+            const d = await fetch(`https://${api}/domains`).then(r => r.json());
+            const user = "n"+Math.random().toString(36).slice(-6)+"@"+d['hydra:member'][0].domain;
+            const pass = "Nam"+Math.floor(Math.random()*999);
+            await fetch(`https://${api}/accounts`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({address:user, password:pass})});
+            const t = await fetch(`https://${api}/token`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({address:user, password:pass})}).then(r => r.json());
+            md.unshift({ address:user, token:t.token, otp:"---", server:api }); p--; syn(); rM();
+        } catch(e) {}
+    }
+
+    function rM() { document.getElementById('m-list').innerHTML = md.map((m, i) => `<div class="mail-box"><span class="otp" id="o-${i}">${m.otp}</span><b>M:</b> ${m.address}<br><button onclick="cp('${m.address}')" style="width:auto;padding:3px 8px;font-size:10px;background:#222;">Copy</button><button onclick="delM(${i})" style="width:auto;padding:3px 8px;font-size:10px;background:#400;margin-left:10px;">Xóa</button></div>`).join(''); stOTP(); }
+    function delM(i) { if(confirm("Xóa?")) { md.splice(i,1); syn(); rM(); } }
+    function stOTP() { if(window.oI) clearInterval(window.oI); window.oI = setInterval(() => { md.forEach(async (m, i) => { if(m.otp!=="---") return; try { const r = await fetch(`https://${m.server}/messages`, { headers:{'Authorization':`Bearer ${m.token}`} }).then(r => r.json()); if(r['hydra:member'].length > 0) { const msg = await fetch(`https://${m.server}/messages/${r['hydra:member'][0].id}`, { headers:{'Authorization':`Bearer ${m.token}`} }).then(r => r.json()); const c = msg.intro.match(/\d{6}/); if(c) { m.otp = c[0]; document.getElementById(`o-${i}`).innerText = c[0]; syn(); } } } catch(e) {} }); }, 4000); }
+    async function uKey() { const k = document.getElementById('ki').value; const s = await db.ref('keys/'+k).once('value'); if(s.val() && s.val().status === "unused") { p += 30; await db.ref('keys/'+k).update({ status: "used" }); syn(); alert("Xong!"); document.getElementById('ki').value=""; } }
+    async function ckey() { const k = document.getElementById('ad-ki').value; if(k) { await db.ref('keys/'+k).set({ status: "unused" }); alert("Đã lưu!"); lAdK(); } }
+    function lAdK() { db.ref('keys').limitToLast(10).on('value', snap => { const ks = snap.val(); const l = document.getElementById('ad-list'); l.innerHTML = ""; if(ks) Object.keys(ks).reverse().forEach(k => { l.innerHTML += `<div style="display:flex;justify-content:space-between;padding:5px;border-bottom:1px solid #111;"><span style="color:${ks[k].status==='unused'?'#0f0':'#444'}">${k}</span><button onclick="cp('${k}')" style="width:auto;padding:2px 5px;font-size:9px;">Copy</button></div>`; }); }); }
+    function cp(t) { navigator.clipboard.writeText(t); alert("Đã copy!"); }
+</script>
+</body>
+</html>
